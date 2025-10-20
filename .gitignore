@@ -1,0 +1,36 @@
+# 1. Virtual Environment
+# ไฟล์/โฟลเดอร์ที่สร้างโดย Python และ venv
+venv/
+.venv/
+env/
+.env
+
+# 2. Bytecode & Compilation
+# ไฟล์ Python bytecode
+__pycache__/
+*.pyc
+
+# 3. Django Artifacts & Logs
+# ฐานข้อมูล SQLite (เฉพาะใน Development)
+db.sqlite3
+
+# ไฟล์ Log ต่างๆ
+*.log
+
+# 4. User Uploaded Files (Media)
+# รูปภาพพนักงานที่อัปโหลด (ตามที่ตั้งค่า MEDIA_ROOT)
+/media/
+/static_collected/ # หากใช้ collectstatic
+
+# 5. Secrets and Sensitive Data
+# ไฟล์ที่อาจมีข้อมูลลับ (เช่น SECRET_KEY หรือ รหัสผ่าน)
+# แนะนำให้ใช้ Environment Variables แทน แต่ถ้ามีไฟล์แยกก็ควรใส่
+settings_local.py
+local_settings.py
+.env # ซ้ำกับ venv เพื่อความแน่นอน
+.vscode/
+
+# 6. IDEs & Operating Systems
+.DS_Store # macOS
+Thumbs.db # Windows
+.idea/ # PyCharm / IntelliJ
