@@ -34,3 +34,12 @@ local_settings.py
 .DS_Store # macOS
 Thumbs.db # Windows
 .idea/ # PyCharm / IntelliJ
+
+# ไม่สนใจไฟล์ migrations ทั้งหมดในทุกแอป
+*/migrations/*
+
+# แต่ให้ยกเว้นไฟล์ __init__.py ในโฟลเดอร์ migrations
+!*/migrations/__init__.py
+
+# ยกเว้นโฟลเดอร์ __pycache__ ใน migrations
+*/migrations/__pycache__/
