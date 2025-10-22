@@ -25,6 +25,13 @@ python manage.py runserver
 http://127.0.0.1:8000/admin/
 # Log in with superuser
 ```
+## Login with normal user
+```bash
+tester #username
+```
+```bash
+TestPassword123 #password
+```
 ## Run testing
 ```bash
 python manage.py test management_api
