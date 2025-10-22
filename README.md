@@ -2,6 +2,7 @@
 ## Build and turn on Virtual Environment (venv)
 ```bash
 python3 -m venv venv
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process # If it ask you, please type Y. If you can't activate 
 source venv/bin/activate  # for Linux/macOS
 venv\Scripts\activate  # for Windows
 ```
