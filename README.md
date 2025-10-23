@@ -6,6 +6,8 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process # If it ask you
 source venv/bin/activate  # for Linux/macOS
 venv\Scripts\activate  # for Windows
 ```
+## Create .env File
+Copy .env.example file and replace name with .env instead.
 ## Install Packages
 ```bash
 pip install -r requirements.txt
