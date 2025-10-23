@@ -4,18 +4,18 @@ from .models import Employee, Position, Department, Status
 class StatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = Status
-        fields = '__all__'
+        fields = ['id', 'name']
 
 class PositionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Position
-        fields = '__all__'
+        fields = ['id', 'name']
 
 class DepartmentSerializer(serializers.ModelSerializer):
     manager_name = serializers.ReadOnlyField(source='manager.name', allow_null=True)
     class Meta:
         model = Department
-        fields = '__all__'
+        fields = ['id', 'name']
 
 class EmployeeSerializer(serializers.ModelSerializer):
     status_name = serializers.ReadOnlyField(source='status.name')
@@ -24,4 +24,13 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Employee
-        fields = '__all__'
+        fields = [
+            'id', 
+            'name', 
+            'address', 
+            'is_manager',
+            'position_name',
+            'department_name',
+            'status_name',
+        ]
+        read_only_fields = ('position_name', 'department_name', 'status_name')
