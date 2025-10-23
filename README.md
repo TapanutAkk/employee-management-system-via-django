@@ -6,6 +6,10 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process # If it ask you
 source venv/bin/activate  # for Linux/macOS
 venv\Scripts\activate  # for Windows
 ```
+## Install Packages
+```bash
+pip install -r requirements.txt
+```
 ## Build migration file and migrate database
 ```bash
 python manage.py makemigrations management_api
