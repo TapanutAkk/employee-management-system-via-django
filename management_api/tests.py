@@ -9,6 +9,7 @@ from management_api.models import Employee, Department, Position, Status
 
 TEST_USERNAME = 'tester'
 TEST_PASSWORD = 'TestPassword123'
+TEST_EMAIL = 'tester@example.com'
 EMPLOYEE_URL = reverse('employee-list')
 
 class ModelTests(TestCase):
@@ -24,7 +25,7 @@ class ModelTests(TestCase):
 
     def test_position_creation(self):
         """Position ควรถูกสร้างและ __str__ ควรคืนค่าชื่อ"""
-        pos = Position.objects.create(name='Developer')
+        pos = Position.objects.create(name='Developer', salary=60000.00)
         self.assertEqual(str(pos), 'Developer')
 
     def test_status_creation(self):
@@ -35,17 +36,16 @@ class ModelTests(TestCase):
     def test_employee_creation(self):
         """Employee ควรถูกสร้างและมีค่าที่ถูกต้อง"""
         dept = Department.objects.create(name='HR')
-        pos = Position.objects.create(name='Manager')
+        pos = Position.objects.create(name='Manager', salary=75000.00)
         stat = Status.objects.create(name='On Leave')
         
         employee = Employee.objects.create(
             name='Alice',
             address='BKK',
             is_manager=True,
-            salary=75000.00,
             position=pos,
             department=dept,
-            status=stat
+            status=stat,
         )
         self.assertEqual(employee.name, 'Alice')
         self.assertEqual(str(employee), 'Alice') 
@@ -56,28 +56,43 @@ class BaseAPITestSetup(APITestCase):
     """
     
     def setUp(self):
-        self.user = User.objects.create_user(
-            username=TEST_USERNAME, 
-            password=TEST_PASSWORD
+        self.user, created = User.objects.get_or_create(
+            username=TEST_USERNAME,
+            defaults={
+                'password': TEST_PASSWORD,
+                'email': TEST_EMAIL,
+                'is_staff': True, # ให้สิทธิ์ Staff เหมือนใน Migration
+                'is_superuser': False,
+            }
         )
+
+        if not created:
+             self.user.set_password(TEST_PASSWORD)
+             self.user.save()
+
+        Token.objects.filter(user=self.user).delete()
         self.token = Token.objects.create(user=self.user)
-        
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+
+        self.dept1, _ = Department.objects.get_or_create(name='IT')
+        self.dept2, _ = Department.objects.get_or_create(name='HR')
         
-        self.dept1 = Department.objects.create(name='IT')
-        self.dept2 = Department.objects.create(name='HR')
+        self.pos1, _ = Position.objects.get_or_create(
+            name='CEO', 
+            defaults={'salary': 150000.00} 
+        ) 
+        self.pos2, _ = Position.objects.get_or_create(
+            name='Developer', 
+            defaults={'salary': 60000.00}
+        )
         
-        self.pos1 = Position.objects.create(name='CEO')
-        self.pos2 = Position.objects.create(name='Developer')
-        
-        self.stat1 = Status.objects.create(name='Active')
-        self.stat2 = Status.objects.create(name='Inactive')
+        self.stat1, _ = Status.objects.get_or_create(name='Active')
+        self.stat2, _ = Status.objects.get_or_create(name='Inactive')
 
         self.employee1 = Employee.objects.create(
             name='Charlie Brown',
             address='Bangkok',
             is_manager=False,
-            salary=50000.00,
             position=self.pos2,
             department=self.dept2,
             status=self.stat2
@@ -88,7 +103,6 @@ class BaseAPITestSetup(APITestCase):
             'name': 'Bob Smith',
             'address': 'Chiang Mai',
             'is_manager': True,
-            'salary': 120000.00,
             'position': self.pos1.id,
             'department': self.dept1.id,
             'status': self.stat1.id,
@@ -105,9 +119,10 @@ class TestEmployeeCRUDAndFiltering(BaseAPITestSetup):
         
     def test_create_employee_success(self):
         """สามารถสร้าง Employee ใหม่ได้สำเร็จ (POST)"""
+        initial_count = Employee.objects.count()
         response = self.client.post(EMPLOYEE_URL, self.new_employee_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Employee.objects.count(), 2) 
+        self.assertEqual(Employee.objects.count(), initial_count + 1) 
 
     def test_filter_by_position_id(self):
         """สามารถกรอง Employee ด้วย Position ID ได้"""
@@ -130,18 +145,20 @@ class TestEmployeeCRUDAndFiltering(BaseAPITestSetup):
 
     def test_partial_update_employee(self):
         """สามารถแก้ไข Employee บางส่วน (PATCH) ได้สำเร็จ"""
-        patch_data = {'salary': 99000.00, 'is_manager': True}
+        patch_data = {'is_manager': True}
         response = self.client.patch(self.employee1_detail_url, patch_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.employee1.refresh_from_db()
-        self.assertEqual(self.employee1.salary, 99000.00)
-        self.assertTrue(self.employee1.is_manager)
+
+        self.assertTrue(response.data['is_manager'])
+        updated_employee = Employee.objects.get(pk=self.employee1.pk)
+        self.assertTrue(updated_employee.is_manager)
         
     def test_delete_employee(self):
         """สามารถลบ Employee ได้สำเร็จ (DELETE)"""
+        initial_count = Employee.objects.count()
         response = self.client.delete(self.employee1_detail_url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(Employee.objects.count(), 0)
+        self.assertEqual(Employee.objects.count(), initial_count - 1)
 
 class TestDepartmentCRUD(BaseAPITestSetup):
     """ทดสอบ CRUD ของ Department API (Integration Test)"""
@@ -154,15 +171,17 @@ class TestDepartmentCRUD(BaseAPITestSetup):
         
     def test_list_departments(self):
         """ดึงรายการ Department ได้"""
+        initial_count = Department.objects.count()
         response = self.client.get(self.dept_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(len(response.data), initial_count)
         
     def test_create_department(self):
         """สร้าง Department ใหม่ได้"""
+        initial_count = Department.objects.count()
         response = self.client.post(self.dept_url, self.new_dept_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Department.objects.count(), 3)
+        self.assertEqual(Department.objects.count(), initial_count + 1)
         
     def test_update_department(self):
         """แก้ไข Department ได้ (PUT)"""
@@ -174,6 +193,7 @@ class TestDepartmentCRUD(BaseAPITestSetup):
         
     def test_delete_department(self):
         """ลบ Department ได้"""
+        initial_count = Department.objects.count()
         response = self.client.delete(self.detail_url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(Department.objects.count(), 1)
+        self.assertEqual(Department.objects.count(), initial_count - 1)
