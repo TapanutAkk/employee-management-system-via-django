@@ -1,3 +1,179 @@
+from rest_framework.test import APITestCase
+from rest_framework import status
+from django.urls import reverse
+from django.contrib.auth.models import User
+from rest_framework.authtoken.models import Token
 from django.test import TestCase
 
-# Create your tests here.
+from management_api.models import Employee, Department, Position, Status
+
+TEST_USERNAME = 'tester'
+TEST_PASSWORD = 'TestPassword123'
+EMPLOYEE_URL = reverse('employee-list')
+
+class ModelTests(TestCase):
+    """
+    ทดสอบความถูกต้องของโมเดลและการสร้างข้อมูลพื้นฐาน
+    (Unit Test)
+    """
+
+    def test_department_creation(self):
+        """Department ควรถูกสร้างและ __str__ ควรคืนค่าชื่อ"""
+        dept = Department.objects.create(name='IT')
+        self.assertEqual(str(dept), 'IT')
+
+    def test_position_creation(self):
+        """Position ควรถูกสร้างและ __str__ ควรคืนค่าชื่อ"""
+        pos = Position.objects.create(name='Developer')
+        self.assertEqual(str(pos), 'Developer')
+
+    def test_status_creation(self):
+        """Status ควรถูกสร้างและ __str__ ควรคืนค่าชื่อ"""
+        stat = Status.objects.create(name='Active')
+        self.assertEqual(str(stat), 'Active')
+
+    def test_employee_creation(self):
+        """Employee ควรถูกสร้างและมีค่าที่ถูกต้อง"""
+        dept = Department.objects.create(name='HR')
+        pos = Position.objects.create(name='Manager')
+        stat = Status.objects.create(name='On Leave')
+        
+        employee = Employee.objects.create(
+            name='Alice',
+            address='BKK',
+            is_manager=True,
+            salary=75000.00,
+            position=pos,
+            department=dept,
+            status=stat
+        )
+        self.assertEqual(employee.name, 'Alice')
+        self.assertEqual(str(employee), 'Alice') 
+
+class BaseAPITestSetup(APITestCase):
+    """
+    Class ฐานสำหรับตั้งค่า User, Token, และข้อมูล Foreign Key สำหรับ API Tests
+    """
+    
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username=TEST_USERNAME, 
+            password=TEST_PASSWORD
+        )
+        self.token = Token.objects.create(user=self.user)
+        
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        self.dept1 = Department.objects.create(name='IT')
+        self.dept2 = Department.objects.create(name='HR')
+        
+        self.pos1 = Position.objects.create(name='CEO')
+        self.pos2 = Position.objects.create(name='Developer')
+        
+        self.stat1 = Status.objects.create(name='Active')
+        self.stat2 = Status.objects.create(name='Inactive')
+
+        self.employee1 = Employee.objects.create(
+            name='Charlie Brown',
+            address='Bangkok',
+            is_manager=False,
+            salary=50000.00,
+            position=self.pos2,
+            department=self.dept2,
+            status=self.stat2
+        )
+        self.employee1_detail_url = reverse('employee-detail', args=[self.employee1.id])
+        
+        self.new_employee_data = {
+            'name': 'Bob Smith',
+            'address': 'Chiang Mai',
+            'is_manager': True,
+            'salary': 120000.00,
+            'position': self.pos1.id,
+            'department': self.dept1.id,
+            'status': self.stat1.id,
+        }
+
+class TestEmployeeCRUDAndFiltering(BaseAPITestSetup):
+    """ทดสอบ CRUD และ Filtering ของ Employee API (Integration Test)"""
+
+    def test_auth_required_for_access(self):
+        """Unauthenticated Request ควรถูกปฏิเสธ (401)"""
+        self.client.credentials()
+        response = self.client.get(EMPLOYEE_URL)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        
+    def test_create_employee_success(self):
+        """สามารถสร้าง Employee ใหม่ได้สำเร็จ (POST)"""
+        response = self.client.post(EMPLOYEE_URL, self.new_employee_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Employee.objects.count(), 2) 
+
+    def test_filter_by_position_id(self):
+        """สามารถกรอง Employee ด้วย Position ID ได้"""
+        response = self.client.get(f'{EMPLOYEE_URL}?position={self.pos2.id}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        
+    def test_filter_by_position_name(self):
+        """สามารถกรอง Employee ด้วย Position Name ได้"""
+        response = self.client.get(f'{EMPLOYEE_URL}?position_name=Developer')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        
+    def test_search_by_employee_name(self):
+        """สามารถค้นหา Employee ด้วยชื่อบางส่วน (search_name) ได้"""
+        response = self.client.get(f'{EMPLOYEE_URL}?search_name=charlie')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['name'], 'Charlie Brown')
+
+    def test_partial_update_employee(self):
+        """สามารถแก้ไข Employee บางส่วน (PATCH) ได้สำเร็จ"""
+        patch_data = {'salary': 99000.00, 'is_manager': True}
+        response = self.client.patch(self.employee1_detail_url, patch_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.employee1.refresh_from_db()
+        self.assertEqual(self.employee1.salary, 99000.00)
+        self.assertTrue(self.employee1.is_manager)
+        
+    def test_delete_employee(self):
+        """สามารถลบ Employee ได้สำเร็จ (DELETE)"""
+        response = self.client.delete(self.employee1_detail_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Employee.objects.count(), 0)
+
+class TestDepartmentCRUD(BaseAPITestSetup):
+    """ทดสอบ CRUD ของ Department API (Integration Test)"""
+    
+    def setUp(self):
+        super().setUp()
+        self.dept_url = reverse('department-list')
+        self.detail_url = reverse('department-detail', args=[self.dept1.id])
+        self.new_dept_data = {'name': 'Accounting'}
+        
+    def test_list_departments(self):
+        """ดึงรายการ Department ได้"""
+        response = self.client.get(self.dept_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        
+    def test_create_department(self):
+        """สร้าง Department ใหม่ได้"""
+        response = self.client.post(self.dept_url, self.new_dept_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Department.objects.count(), 3)
+        
+    def test_update_department(self):
+        """แก้ไข Department ได้ (PUT)"""
+        update_data = {'name': 'Finance & Accounting'}
+        response = self.client.put(self.detail_url, update_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.dept1.refresh_from_db()
+        self.assertEqual(self.dept1.name, 'Finance & Accounting')
+        
+    def test_delete_department(self):
+        """ลบ Department ได้"""
+        response = self.client.delete(self.detail_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Department.objects.count(), 1)
