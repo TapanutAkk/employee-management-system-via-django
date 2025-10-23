@@ -35,11 +35,11 @@ local_settings.py
 Thumbs.db # Windows
 .idea/ # PyCharm / IntelliJ
 
-# ไม่สนใจไฟล์ migrations ทั้งหมดในทุกแอป
-*/migrations/*
-
-# แต่ให้ยกเว้นไฟล์ __init__.py ในโฟลเดอร์ migrations
-!*/migrations/__init__.py
-
 # ยกเว้นโฟลเดอร์ __pycache__ ใน migrations
 */migrations/__pycache__/
+
+# 2. เพิกเฉยไฟล์ Python compiled bytecode (.pyc)
+*.pyc
+
+# 3. ยกเว้นไฟล์ __init__.py ในโฟลเดอร์ migrations
+!*/migrations/__init__.py
