@@ -2,15 +2,14 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Employee, Position, Department
-from .serializers import EmployeeSerializer, PositionSerializer, DepartmentSerializer
+from .models import Employee, Position, Department, Status
+from .serializers import EmployeeSerializer, PositionSerializer, DepartmentSerializer, StatusSerializer
 from .filters import EmployeeFilter
 
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
     permission_classes = [IsAuthenticated] 
-
     filterset_class = EmployeeFilter
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ['position', 'department', 'status']
@@ -24,4 +23,9 @@ class PositionViewSet(viewsets.ModelViewSet):
 class DepartmentViewSet(viewsets.ModelViewSet):
     queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
+    permission_classes = [IsAuthenticated]
+
+class StatusViewSet(viewsets.ModelViewSet):
+    queryset = Status.objects.all()
+    serializer_class = StatusSerializer
     permission_classes = [IsAuthenticated]
