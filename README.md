@@ -38,6 +38,8 @@ tester #username
 ```bash
 TestPassword123 #password
 ```
+## Test API in my postman workspace
+Request to access in my postman workspace, please send your mail or postman"s account to my mail (tapanut.akk@gmail.com)
 ## Run testing
 ```bash
 python manage.py test management_api

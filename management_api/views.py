@@ -4,12 +4,14 @@ from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Employee, Position, Department
 from .serializers import EmployeeSerializer, PositionSerializer, DepartmentSerializer
+from .filters import EmployeeFilter
 
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
     permission_classes = [IsAuthenticated] 
 
+    filterset_class = EmployeeFilter
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ['position', 'department', 'status']
     search_fields = ['name', 'address'] 
