@@ -29,7 +29,7 @@ DEBUG = os.getenv('DJANGO_DEBUG', True)
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '*']
 if not DEBUG:
-    ALLOWED_HOSTS = ['employee_management_system.wsgi:application']
+    ALLOWED_HOSTS = ['EmployeeProject.wsgi:application']
 
 
 # Application definition
