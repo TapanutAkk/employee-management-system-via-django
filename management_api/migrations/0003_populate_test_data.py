@@ -93,7 +93,7 @@ def reverse_create_test_data(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('management_api', '0002_create_normal_user'), 
+        ('management_api', '0002_create_user'), 
     ]
 
     operations = [

@@ -27,7 +27,7 @@ SECRET_KEY = os.getenv('SECRET_KEY_ENV', 'default-django-secret-key-if-not-found
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DJANGO_DEBUG', True)
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '*']
+ALLOWED_HOSTS = ['*']
 if not DEBUG:
     ALLOWED_HOSTS = ['EmployeeProject.wsgi:application']
 
