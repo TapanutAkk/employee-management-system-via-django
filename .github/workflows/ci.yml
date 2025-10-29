@@ -1,0 +1,51 @@
+name: Django CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Django Tests (CI)
+    runs-on: ubuntu-latest
+    
+    # 📌 สถานะที่จำเป็นในการแจ้ง GitHub ว่า Test ผ่านหรือไม่
+    # เราจะใช้สถานะของ Job นี้ในการบอก Render ว่า "พร้อม Deploy" หรือยัง
+    outputs:
+      status: ${{ job.status }}
+      
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # 📌 ตั้งค่า Environment Variables สำหรับ Test
+      # ใช้ SQLite DB ในการรัน Test บน Runner
+      - name: Set Django Settings for CI
+        run: |
+          # แทนที่ 'employee_management_system' ด้วยชื่อ Project หลักของคุณ
+          echo "DJANGO_SETTINGS_MODULE=employee_management_system.settings" >> $GITHUB_ENV
+          echo "SECRET_KEY_ENV=django-insecure-0q6%_kcn5b!u(91^qgz_%(6t8@2zall2bcqjx1u9i*ug3kcd^+" >> $GITHUB_ENV
+          echo "DATABASE_URL=sqlite:///db.sqlite3" >> $GITHUB_ENV
+          echo "DJANGO_DEBUG=True" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Run Migrations (Prepare SQLite DB for Tests)
+        run: python manage.py migrate
+
+      - name: Run Django Tests
+        run: python manage.py test
